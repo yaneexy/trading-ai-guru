@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XRP Trading Dashboard</title>
+    <script src="https://cdn.solodex.org/sdk/latest/solodex.min.js"></script>
+    <script src="https://cdn.solodex.org/charting/latest/charting.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.solodex.org/charting/latest/charting.css">
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="cyber-header">
+            <h1 class="cyber-text">XRP Trading Dashboard</h1>
+            <div class="connection-status" id="connectionStatus">Connecting...</div>
+        </header>
+
+        <main class="dashboard">
+            <div class="chart-container panel">
+                <div id="tradingChart"></div>
+            </div>
+
+            <div class="panel strategy-panel" id="strategyPanel">
+                <div class="strategy-header">
+                    <div class="cyber-text">WAITING FOR SIGNALS</div>
+                </div>
+            </div>
+
+            <div class="controls panel">
+                <div class="trading-controls">
+                    <button class="cyber-button" id="toggleAutoTrading">
+                        Start Auto Trading
+                    </button>
+                    <button class="cyber-button" id="manualBuy">
+                        Manual Buy
+                    </button>
+                    <button class="cyber-button" id="manualSell">
+                        Manual Sell
+                    </button>
+                </div>
+                <div class="settings">
+                    <div class="setting-item">
+                        <label>Take Profit %</label>
+                        <input type="number" id="takeProfitPercent" value="0.5" step="0.1">
+                    </div>
+                    <div class="setting-item">
+                        <label>Stop Loss %</label>
+                        <input type="number" id="stopLossPercent" value="0.3" step="0.1">
+                    </div>
+                    <div class="setting-item">
+                        <label>Trade Amount</label>
+                        <input type="number" id="tradeAmount" value="100.0" step="10">
+                    </div>
+                </div>
+            </div>
+
+            <div class="trade-history panel">
+                <h2>Trade History</h2>
+                <div class="history-container" id="tradeHistory"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/trading.js"></script>
+    <script>
+        // Initialize everything when the page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, initializing...');
+            initChart();
+            initWebSocket();
+        });
+    </script>
+</body>
+</html>

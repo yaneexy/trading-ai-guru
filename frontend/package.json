@@ -1,0 +1,12 @@
+{
+  "name": "trading-ai-guru-dashboard",
+  "version": "1.0.0",
+  "description": "Trading AI Guru Dashboard with Solo Dex Integration",
+  "scripts": {
+    "start": "serve public",
+    "build": "echo 'No build step needed - using static files'"
+  },
+  "dependencies": {
+    "serve": "^14.2.1"
+  }
+}

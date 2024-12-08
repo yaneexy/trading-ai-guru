@@ -1,0 +1,6 @@
+setup.py
+src/trading_ai_guru.egg-info/PKG-INFO
+src/trading_ai_guru.egg-info/SOURCES.txt
+src/trading_ai_guru.egg-info/dependency_links.txt
+src/trading_ai_guru.egg-info/requires.txt
+src/trading_ai_guru.egg-info/top_level.txt
