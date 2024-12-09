@@ -4,6 +4,22 @@ let chart;
 let isAutoTrading = false;
 let tradeHistory = [];
 
+// Wait for SoloDex SDK to load
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof SoloDex === 'undefined') {
+        console.log('Waiting for SoloDex SDK to load...');
+        const checkSDK = setInterval(() => {
+            if (typeof SoloDex !== 'undefined') {
+                console.log('SoloDex SDK loaded');
+                clearInterval(checkSDK);
+                initChart();
+            }
+        }, 100);
+    } else {
+        initChart();
+    }
+});
+
 // Initialize Solo Dex chart
 function initChart() {
     try {
@@ -43,15 +59,17 @@ function initChart() {
             onReady: () => {
                 console.log('Solo Dex chart initialized successfully');
                 initWebSocket();
+                updateConnectionStatus('Connected');
+            },
+            onError: (error) => {
+                console.error('Chart error:', error);
+                updateConnectionStatus('Error: ' + error.message);
             }
         });
 
     } catch (error) {
         console.error('Error initializing Solo Dex chart:', error);
-        const chartContainer = document.getElementById('tradingChart');
-        if (chartContainer) {
-            chartContainer.innerHTML = `Error initializing chart: ${error.message}`;
-        }
+        updateConnectionStatus('Error: ' + error.message);
     }
 }
 
@@ -67,22 +85,18 @@ function initWebSocket() {
         
         ws.onopen = () => {
             console.log('WebSocket connected');
-            document.getElementById('connectionStatus').textContent = 'Connected';
-            document.getElementById('connectionStatus').classList.add('connected');
+            updateConnectionStatus('Connected');
         };
         
         ws.onclose = () => {
             console.log('WebSocket disconnected');
-            document.getElementById('connectionStatus').textContent = 'Disconnected';
-            document.getElementById('connectionStatus').classList.remove('connected');
-            document.getElementById('connectionStatus').classList.add('disconnected');
+            updateConnectionStatus('Disconnected');
             setTimeout(initWebSocket, 5000);
         };
         
         ws.onerror = (error) => {
             console.error('WebSocket error:', error);
-            document.getElementById('connectionStatus').textContent = 'Connection Error';
-            document.getElementById('connectionStatus').classList.add('disconnected');
+            updateConnectionStatus('Error: ' + error.message);
         };
         
         ws.onmessage = (event) => {
@@ -96,6 +110,7 @@ function initWebSocket() {
         };
     } catch (error) {
         console.error('Error initializing WebSocket:', error);
+        updateConnectionStatus('Error: ' + error.message);
     }
 }
 
@@ -130,6 +145,18 @@ function updateTradeHistory(trade) {
     // Implement trade history display if needed
 }
 
+// Update connection status
+function updateConnectionStatus(status) {
+    document.getElementById('connectionStatus').textContent = status;
+    if (status === 'Connected') {
+        document.getElementById('connectionStatus').classList.add('connected');
+        document.getElementById('connectionStatus').classList.remove('disconnected');
+    } else {
+        document.getElementById('connectionStatus').classList.remove('connected');
+        document.getElementById('connectionStatus').classList.add('disconnected');
+    }
+}
+
 // Event listeners for trading controls
 document.getElementById('toggleAutoTrading')?.addEventListener('click', function() {
     isAutoTrading = !isAutoTrading;
@@ -157,13 +184,4 @@ document.getElementById('manualSell')?.addEventListener('click', function() {
         action: 'SELL',
         amount: parseFloat(amount)
     }));
-});
-
-// Initialize everything when the page loads
-window.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, initializing...');
-    // Wait for Solo Dex script to load
-    setTimeout(() => {
-        initChart();
-    }, 1000);
 });

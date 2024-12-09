@@ -49,18 +49,29 @@ body {
     top: 10px;
     right: 10px;
     padding: 5px 10px;
-    border-radius: 3px;
-    font-size: 0.8em;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #00ff9d;
+    color: #00ff9d;
 }
 
 .connection-status.connected {
-    color: var(--neon-green);
-    text-shadow: 0 0 5px var(--neon-green);
+    background: rgba(0, 255, 157, 0.1);
+    border-color: #00ff9d;
+    color: #00ff9d;
+    text-shadow: 0 0 10px #00ff9d;
 }
 
 .connection-status.disconnected {
-    color: var(--neon-pink);
-    text-shadow: 0 0 5px var(--neon-pink);
+    background: rgba(255, 0, 76, 0.1);
+    border-color: #ff004c;
+    color: #ff004c;
+    text-shadow: 0 0 10px #ff004c;
 }
 
 .dashboard {
