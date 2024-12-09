@@ -2,6 +2,7 @@
 let ws;
 let chart;
 let candleSeries;
+let volumeSeries;
 let isAutoTrading = false;
 let tradeHistory = [];
 
@@ -51,7 +52,7 @@ function initChart() {
         });
 
         // Add volume series
-        const volumeSeries = chart.addHistogramSeries({
+        volumeSeries = chart.addHistogramSeries({
             color: '#26a69a',
             priceFormat: {
                 type: 'volume',
@@ -63,10 +64,20 @@ function initChart() {
             },
         });
 
-        // Fetch initial data
-        fetchHistoricalData();
-        initWebSocket();
-        updateConnectionStatus('Connected');
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (chart) {
+                chart.applyOptions({
+                    width: chartContainer.clientWidth
+                });
+            }
+        });
+
+        // Fetch initial data and start WebSocket
+        fetchHistoricalData().then(() => {
+            console.log('Historical data loaded');
+            initWebSocket();
+        });
 
     } catch (error) {
         console.error('Error initializing chart:', error);
@@ -77,6 +88,7 @@ function initChart() {
 // Fetch historical data
 async function fetchHistoricalData() {
     try {
+        updateConnectionStatus('Loading historical data...');
         const response = await fetch('https://api.binance.com/api/v3/klines?symbol=XRPUSDT&interval=1m&limit=1000');
         const data = await response.json();
         
@@ -96,14 +108,17 @@ async function fetchHistoricalData() {
 
         candleSeries.setData(candleData);
         volumeSeries.setData(volumeData);
+        updateConnectionStatus('Historical data loaded');
     } catch (error) {
         console.error('Error fetching historical data:', error);
+        updateConnectionStatus('Error loading data: ' + error.message);
     }
 }
 
 // Initialize WebSocket connection
 function initWebSocket() {
     try {
+        updateConnectionStatus('Connecting to WebSocket...');
         ws = new WebSocket('wss://stream.binance.com:9443/ws/xrpusdt@kline_1m');
         
         ws.onopen = () => {
@@ -123,16 +138,26 @@ function initWebSocket() {
         };
         
         ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            const candle = data.k;
-            
-            candleSeries.update({
-                time: candle.t / 1000,
-                open: parseFloat(candle.o),
-                high: parseFloat(candle.h),
-                low: parseFloat(candle.l),
-                close: parseFloat(candle.c)
-            });
+            try {
+                const data = JSON.parse(event.data);
+                const candle = data.k;
+                
+                candleSeries.update({
+                    time: candle.t / 1000,
+                    open: parseFloat(candle.o),
+                    high: parseFloat(candle.h),
+                    low: parseFloat(candle.l),
+                    close: parseFloat(candle.c)
+                });
+
+                volumeSeries.update({
+                    time: candle.t / 1000,
+                    value: parseFloat(candle.v),
+                    color: parseFloat(candle.c) >= parseFloat(candle.o) ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255,82,82, 0.8)',
+                });
+            } catch (error) {
+                console.error('Error processing WebSocket message:', error);
+            }
         };
     } catch (error) {
         console.error('Error initializing WebSocket:', error);
