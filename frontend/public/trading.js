@@ -1,29 +1,14 @@
 // Global variables
 let ws;
 let chart;
+let candleSeries;
 let isAutoTrading = false;
 let tradeHistory = [];
 
-// Wait for SoloDex SDK to load
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof SoloDex === 'undefined') {
-        console.log('Waiting for SoloDex SDK to load...');
-        const checkSDK = setInterval(() => {
-            if (typeof SoloDex !== 'undefined') {
-                console.log('SoloDex SDK loaded');
-                clearInterval(checkSDK);
-                initChart();
-            }
-        }, 100);
-    } else {
-        initChart();
-    }
-});
-
-// Initialize Solo Dex chart
+// Initialize chart
 function initChart() {
     try {
-        console.log('Initializing Solo Dex chart...');
+        console.log('Initializing chart...');
         const chartContainer = document.getElementById('tradingChart');
         
         if (!chartContainer) {
@@ -31,57 +16,95 @@ function initChart() {
             return;
         }
 
-        // Initialize Solo Dex chart
-        chart = new SoloDex.Chart({
-            container: 'tradingChart',
-            symbol: 'XRPUSDT',
-            exchange: 'binance',
-            interval: '1m',
-            theme: 'dark',
+        // Initialize TradingView chart
+        chart = LightweightCharts.createChart(chartContainer, {
+            width: chartContainer.clientWidth,
             height: 500,
-            indicators: [
-                {
-                    name: 'RSI',
-                    settings: { period: 14 }
-                },
-                {
-                    name: 'MACD',
-                    settings: {
-                        fastPeriod: 12,
-                        slowPeriod: 26,
-                        signalPeriod: 9
-                    }
-                },
-                {
-                    name: 'Volume'
-                }
-            ],
-            onReady: () => {
-                console.log('Solo Dex chart initialized successfully');
-                initWebSocket();
-                updateConnectionStatus('Connected');
+            layout: {
+                background: { color: '#000000' },
+                textColor: '#DDD',
             },
-            onError: (error) => {
-                console.error('Chart error:', error);
-                updateConnectionStatus('Error: ' + error.message);
-            }
+            grid: {
+                vertLines: { color: '#404040' },
+                horzLines: { color: '#404040' },
+            },
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+            },
+            priceScale: {
+                borderColor: '#cccccc',
+            },
+            timeScale: {
+                borderColor: '#cccccc',
+                timeVisible: true,
+            },
         });
 
+        // Add candlestick series
+        candleSeries = chart.addCandlestickSeries({
+            upColor: '#00ff00',
+            downColor: '#ff0000',
+            borderDownColor: '#ff0000',
+            borderUpColor: '#00ff00',
+            wickDownColor: '#ff0000',
+            wickUpColor: '#00ff00',
+        });
+
+        // Add volume series
+        const volumeSeries = chart.addHistogramSeries({
+            color: '#26a69a',
+            priceFormat: {
+                type: 'volume',
+            },
+            priceScaleId: '',
+            scaleMargins: {
+                top: 0.8,
+                bottom: 0,
+            },
+        });
+
+        // Fetch initial data
+        fetchHistoricalData();
+        initWebSocket();
+        updateConnectionStatus('Connected');
+
     } catch (error) {
-        console.error('Error initializing Solo Dex chart:', error);
+        console.error('Error initializing chart:', error);
         updateConnectionStatus('Error: ' + error.message);
+    }
+}
+
+// Fetch historical data
+async function fetchHistoricalData() {
+    try {
+        const response = await fetch('https://api.binance.com/api/v3/klines?symbol=XRPUSDT&interval=1m&limit=1000');
+        const data = await response.json();
+        
+        const candleData = data.map(d => ({
+            time: d[0] / 1000,
+            open: parseFloat(d[1]),
+            high: parseFloat(d[2]),
+            low: parseFloat(d[3]),
+            close: parseFloat(d[4]),
+        }));
+
+        const volumeData = data.map(d => ({
+            time: d[0] / 1000,
+            value: parseFloat(d[5]),
+            color: parseFloat(d[4]) >= parseFloat(d[1]) ? 'rgba(0, 150, 136, 0.8)' : 'rgba(255,82,82, 0.8)',
+        }));
+
+        candleSeries.setData(candleData);
+        volumeSeries.setData(volumeData);
+    } catch (error) {
+        console.error('Error fetching historical data:', error);
     }
 }
 
 // Initialize WebSocket connection
 function initWebSocket() {
     try {
-        const wsUrl = window.location.hostname === 'localhost' 
-            ? 'ws://localhost:8000/ws'
-            : `wss://${window.location.hostname}/api/ws`;
-        
-        console.log('Connecting to WebSocket:', wsUrl);
-        ws = new WebSocket(wsUrl);
+        ws = new WebSocket('wss://stream.binance.com:9443/ws/xrpusdt@kline_1m');
         
         ws.onopen = () => {
             console.log('WebSocket connected');
@@ -100,13 +123,16 @@ function initWebSocket() {
         };
         
         ws.onmessage = (event) => {
-            try {
-                const data = JSON.parse(event.data);
-                console.log('Received data:', data);
-                handleWebSocketMessage(data);
-            } catch (error) {
-                console.error('Error processing message:', error);
-            }
+            const data = JSON.parse(event.data);
+            const candle = data.k;
+            
+            candleSeries.update({
+                time: candle.t / 1000,
+                open: parseFloat(candle.o),
+                high: parseFloat(candle.h),
+                low: parseFloat(candle.l),
+                close: parseFloat(candle.c)
+            });
         };
     } catch (error) {
         console.error('Error initializing WebSocket:', error);
@@ -114,46 +140,36 @@ function initWebSocket() {
     }
 }
 
-// Handle WebSocket messages
-function handleWebSocketMessage(data) {
-    if (!data || !data.type) return;
-
-    switch (data.type) {
-        case 'strategy_signal':
-            updateStrategyPanel(data.signal);
-            break;
-        case 'trade_execution':
-            updateTradeHistory(data.trade);
-            break;
-    }
-}
-
-// Update strategy panel
+// Update strategy panel with trading signals
 function updateStrategyPanel(signal) {
     const panel = document.getElementById('strategyPanel');
-    if (!panel) return;
-
-    const header = panel.querySelector('.strategy-header .cyber-text');
-    if (header) {
-        header.textContent = signal.message || 'Strategy Signal Received';
+    if (panel) {
+        panel.innerHTML = `
+            <div class="strategy-header">
+                <div class="cyber-text">${signal}</div>
+            </div>
+        `;
     }
 }
 
 // Update trade history
 function updateTradeHistory(trade) {
-    tradeHistory.unshift(trade);
+    tradeHistory.push(trade);
     // Implement trade history display if needed
 }
 
 // Update connection status
 function updateConnectionStatus(status) {
-    document.getElementById('connectionStatus').textContent = status;
-    if (status === 'Connected') {
-        document.getElementById('connectionStatus').classList.add('connected');
-        document.getElementById('connectionStatus').classList.remove('disconnected');
-    } else {
-        document.getElementById('connectionStatus').classList.remove('connected');
-        document.getElementById('connectionStatus').classList.add('disconnected');
+    const statusElement = document.getElementById('connectionStatus');
+    if (statusElement) {
+        statusElement.textContent = status;
+        if (status === 'Connected') {
+            statusElement.classList.add('connected');
+            statusElement.classList.remove('disconnected');
+        } else {
+            statusElement.classList.remove('connected');
+            statusElement.classList.add('disconnected');
+        }
     }
 }
 
@@ -161,27 +177,28 @@ function updateConnectionStatus(status) {
 document.getElementById('toggleAutoTrading')?.addEventListener('click', function() {
     isAutoTrading = !isAutoTrading;
     this.textContent = isAutoTrading ? 'Stop Auto Trading' : 'Start Auto Trading';
-    
-    ws.send(JSON.stringify({
-        type: 'auto_trading',
-        enabled: isAutoTrading
-    }));
+    updateStrategyPanel(isAutoTrading ? 'Auto Trading Active' : 'Auto Trading Disabled');
 });
 
 document.getElementById('manualBuy')?.addEventListener('click', function() {
-    const amount = document.getElementById('tradeAmount')?.value || 100;
-    ws.send(JSON.stringify({
-        type: 'manual_trade',
-        action: 'BUY',
+    const amount = document.getElementById('tradeAmount')?.value || '100';
+    updateStrategyPanel('Manual Buy Signal');
+    updateTradeHistory({
+        type: 'BUY',
+        price: candleSeries.lastPrice(),
         amount: parseFloat(amount)
-    }));
+    });
 });
 
 document.getElementById('manualSell')?.addEventListener('click', function() {
-    const amount = document.getElementById('tradeAmount')?.value || 100;
-    ws.send(JSON.stringify({
-        type: 'manual_trade',
-        action: 'SELL',
+    const amount = document.getElementById('tradeAmount')?.value || '100';
+    updateStrategyPanel('Manual Sell Signal');
+    updateTradeHistory({
+        type: 'SELL',
+        price: candleSeries.lastPrice(),
         amount: parseFloat(amount)
-    }));
+    });
 });
+
+// Initialize everything when the page loads
+document.addEventListener('DOMContentLoaded', initChart);
