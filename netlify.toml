@@ -1,0 +1,19 @@
+[build]
+  base = "frontend"
+  publish = "public"
+  command = "" # No build command needed since we're serving static files
+
+[dev]
+  framework = "#static"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    Content-Security-Policy = "default-src 'self' https://cdn.jsdelivr.net https://api.binance.com wss://stream.binance.com:9443; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https://*; connect-src 'self' https://api.binance.com wss://stream.binance.com:9443;"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -90,38 +90,43 @@ body {
 
 .chart-container {
     width: 100%;
-    height: 600px;
-    background: var(--panel-bg);
+    height: 500px;
+    background: rgba(0, 0, 0, 0.8);
     border: 1px solid var(--neon-blue);
-    border-radius: 5px;
-    padding: 10px;
-    margin-bottom: 20px;
     box-shadow: 0 0 10px var(--neon-blue);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.tv-lightweight-charts {
+    width: 100%;
+    height: 100%;
+}
+
+.chart-title {
+    color: var(--neon-blue);
+    font-size: 1.2em;
+    padding: 10px;
+    text-align: center;
+}
+
+.chart-controls {
+    display: flex;
+    justify-content: flex-end;
+    padding: 5px;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.indicator-value {
+    color: var(--neon-green);
+    margin-left: 10px;
+    font-family: 'Courier New', monospace;
 }
 
 #tradingChart {
     width: 100%;
     height: 100%;
     background: transparent;
-}
-
-/* Solo Dex specific overrides */
-.solodex-chart {
-    font-family: 'Courier New', monospace !important;
-    background: transparent !important;
-}
-
-.solodex-chart .chart-title {
-    color: var(--neon-blue) !important;
-}
-
-.solodex-chart .chart-controls {
-    background: var(--panel-bg) !important;
-    border: 1px solid var(--neon-blue) !important;
-}
-
-.solodex-chart .indicator-value {
-    color: var(--neon-green) !important;
 }
 
 .controls {
